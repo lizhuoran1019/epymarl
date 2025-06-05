@@ -40,7 +40,11 @@ class BasicMAC:
         return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
 
     def init_hidden(self, batch_size):
-        self.hidden_states = self.agent.init_hidden().unsqueeze(0).expand(batch_size, self.n_agents, -1)  # bav
+        init_hidden = self.agent.init_hidden()
+        if init_hidden is not None:
+            self.hidden_states = init_hidden.unsqueeze(0).expand(batch_size, self.n_agents, -1)  # bav
+        else:
+            self.hidden_states = None
 
     def parameters(self):
         return self.agent.parameters()

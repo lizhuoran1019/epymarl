@@ -1,0 +1,19 @@
+env_name: "na3_avail_6_a2_0.5"
+env: "uan_rl_delay_power"
+
+env_args:
+  targetName: "uan-rl-tx-delay"
+  ns3Path: "/home/lzr/ns-3-dev/"
+  ns3Settings:
+    packetSize: 360
+    dataRateBps: 1280
+    txPowerNum: 1
+    txDelayAvailableTime: 6
+    appType: "two_state_markov"
+    alpha1: 0.125
+    alpha2: 0.5
+  # shmSize: 16384
+  # segName: "Seg"
+  port: 0
+  simSeed: 0
+  episode_limit: 700

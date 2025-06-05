@@ -1,0 +1,43 @@
+# --- MAPPO specific parameters ---
+
+action_selector: "soft_policies"
+mask_before_softmax: True
+
+runner: "parallel"
+
+buffer_size: 10
+batch_size_run: 10
+batch_size: 10
+
+# update the target network every {} training steps
+target_update_interval_or_tau: 10
+
+lr: 0.001
+hidden_dim: 128
+
+obs_agent_id: True
+obs_last_action: False
+obs_individual_obs: False
+
+agent_output_type: "pi_logits"
+learner: "ppo_learner"
+use_rnn: True
+standardise_returns: False
+standardise_rewards: False
+q_nstep: 5 # 1 corresponds to normal r + gammaV
+critic_type: "cv_critic_noise"
+epochs: 4
+eps_clip: 0.1
+name: "mappo_noise"
+
+t_max: 25000000
+
+# agent: "rnn_2"
+# use_layer_norm: True
+
+common_reward: False  # Run experiment with common reward setup
+
+noise_dim: 20
+noise_scale: 1
+
+entropy_coef: 0.05

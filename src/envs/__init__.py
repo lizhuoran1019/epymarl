@@ -58,3 +58,10 @@ def register_smacv2():
         return SMACv2Wrapper(**kwargs)
 
     REGISTRY["sc2v2"] = smacv2_fn
+
+    
+# Register ns3_gym environment
+from .ns3_gym_env import Ns3GymEnv
+def ns3_gym_fn(**kwargs) -> MultiAgentEnv:
+    return Ns3GymEnv(**kwargs)
+REGISTRY["ns3_gym"] = ns3_gym_fn

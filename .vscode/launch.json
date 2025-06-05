@@ -1,0 +1,39 @@
+{
+    // Configurations for debugging Python scripts
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Run ns3 1",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/main-ns3.py",
+            "args": [
+                "--config=mappo",
+                "--env-config=ns3_avail_8_a2_0.6",
+                // "with",
+                // "seed=269218384",
+                // "env_args.segName='seg_1",
+                // "checkpoint_path=results/models/qplex_env__2025-05-17_18-57-47",
+                // "load_step=2250500",
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Run ns3 2",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/main-ns3.py",
+            "args": [
+                "--config=qplex",
+                "--env-config=ns3_a2_0.7",
+                "with",
+                "seed=948733103",
+                "env_args.segName='seg_2",
+                "checkpoint_path=results/models/qplex_env__2025-05-15_15-52-14",
+                "load_step=2250500",
+            ],
+            // "console": "integratedTerminal"
+        }
+
+    ]
+}
