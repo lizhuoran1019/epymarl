@@ -4,10 +4,10 @@ env_args:
   targetName: "uan-rl-tx-delay"
   ns3Path: "/home/lzr/ns-3-dev/"
   ns3Settings:
-    packetSize: 256
+    packetSize: 360
     dataRateBps: 1280
     txPowerNum: 1
-    txDelayAvailableTime: 8
+    txDelayAvailableTime: 5
     appType: "two_state_markov"
     alpha1: 0.175
     alpha2: 0.7
@@ -15,6 +15,7 @@ env_args:
   # segName: "Seg"
   port: 0
   simSeed: 0
-  episode_limit: 500
-  
-  key: "a2=0.7"
+  episode_limit: 5000
+  key: "ns3_avail_5_a2_0.7"
+
+time_shape: 8

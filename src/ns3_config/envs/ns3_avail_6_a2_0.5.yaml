@@ -1,5 +1,4 @@
-env_name: "na3_avail_6_a2_0.5"
-env: "uan_rl_delay_power"
+env: "ns3_gym"
 
 env_args:
   targetName: "uan-rl-tx-delay"
@@ -16,4 +15,7 @@ env_args:
   # segName: "Seg"
   port: 0
   simSeed: 0
-  episode_limit: 700
+  episode_limit: 1000
+  key: "ns3_avail_6_a2_0.5"
+
+time_shape: 9

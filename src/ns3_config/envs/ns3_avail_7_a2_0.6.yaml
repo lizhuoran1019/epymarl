@@ -7,15 +7,15 @@ env_args:
     packetSize: 360
     dataRateBps: 1280
     txPowerNum: 1
-    txDelayAvailableTime: 8
+    txDelayAvailableTime: 7
     appType: "two_state_markov"
-    alpha1: 0.125
-    alpha2: 0.5
+    alpha1: 0.15
+    alpha2: 0.6
   # shmSize: 16384
   # segName: "Seg"
   port: 0
   simSeed: 0
-  episode_limit: 600
-  key: "ns3_avail_8_a2_0.5"
+  episode_limit: 1000
+  key: "ns3_avail_7_a2_0.6"
 
-time_shape: 11
+time_shape: 10
