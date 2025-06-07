@@ -7,6 +7,7 @@ from torch.optim import Adam
 from components.episode_buffer import EpisodeBatch
 from components.standarize_stream import RunningMeanStd
 from modules.critics import REGISTRY as critic_resigtry
+from utils.rl_utils import build_gae_targets
 
 
 class PPOLearner:
@@ -168,8 +169,15 @@ class PPOLearner:
         if self.args.standardise_returns:
             target_vals = target_vals * th.sqrt(self.ret_ms.var) + self.ret_ms.mean
 
-        target_returns = self.nstep_returns(
-            rewards, mask, target_vals, self.args.q_nstep
+        # target_returns = self.nstep_returns(
+        #     rewards, mask, target_vals, self.args.q_nstep
+        # )
+        target_returns = build_gae_targets(
+            rewards,
+            mask,
+            target_vals,
+            self.args.gamma,
+            self.args.td_lambda,
         )
         if self.args.standardise_returns:
             self.ret_ms.update(target_returns)

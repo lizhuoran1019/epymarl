@@ -8,8 +8,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/main-ns3.py",
             "args": [
-                "--config=mappo_noise",
-                "--env-config=ns3_avail_3_a2_0.6",
+                "--config=mappo",
+                "--env-config=ns3_avail_6_a2_0.6",
                 // "with",
                 // "seed=269218384",
                 // "env_args.segName='seg_1",

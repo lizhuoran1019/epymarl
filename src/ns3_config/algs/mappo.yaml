@@ -24,13 +24,14 @@ learner: "ppo_learner"
 use_rnn: True
 standardise_returns: False
 standardise_rewards: False
-q_nstep: 5 # 1 corresponds to normal r + gammaV
+# q_nstep: 5 # 1 corresponds to normal r + gammaV
+td_lambda: 0.8 # gae lambda
 critic_type: "cv_critic"
 epochs: 4
 eps_clip: 0.2
 name: "mappo"
 
-t_max: 25000000
+t_max: 4001000
 
 # agent: "rnn_2"
 # use_layer_norm: True
