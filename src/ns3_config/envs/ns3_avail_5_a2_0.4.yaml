@@ -15,7 +15,7 @@ env_args:
   # segName: "Seg"
   port: 0
   simSeed: 0
-  episode_limit: 1500
+  episode_limit: 1000
   key: "ns3_avail_5_a2_0.4"
 
 time_shape: 8

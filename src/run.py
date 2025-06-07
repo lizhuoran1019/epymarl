@@ -44,7 +44,8 @@ def run(_run, _config, _log):
     except:
         map_name = _config["env_args"]["key"]
     unique_token = (
-        f"{_config['name']}_seed{_config['seed']}_{map_name}_{datetime.datetime.now()}"
+        # f"{_config['name']}_seed{_config['seed']}_{map_name}_{datetime.datetime.now()}"
+        f"{map_name}/{_config['name']}/{datetime.datetime.now()}"
     )
 
     args.unique_token = unique_token

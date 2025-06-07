@@ -30,7 +30,7 @@ epochs: 4
 eps_clip: 0.2
 name: "mappo_noise"
 
-t_max: 5001000
+t_max: 3001000
 
 # agent: "rnn_2"
 # use_layer_norm: True
