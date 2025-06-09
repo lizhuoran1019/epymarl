@@ -56,7 +56,9 @@ class CentralVCriticNoise(nn.Module):
         inputs = th.cat(inputs, dim=-1)
         
         # noise
-        noise = th.randn((bs, max_t, self.n_agents, self.args.noise_dim), device=batch.device)
+        # noise = th.randn((bs, max_t, self.n_agents, self.args.noise_dim), device=batch.device)
+        noise = th.randn((max_t, self.n_agents, self.args.noise_dim), device=batch.device)
+        noise = noise.unsqueeze(0).expand(bs, -1, -1, -1)  # Expand to match batch size
         inputs = th.cat([inputs, noise], dim=-1)
         return inputs, bs, max_t
 

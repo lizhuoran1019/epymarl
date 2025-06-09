@@ -28,10 +28,10 @@ standardise_rewards: False
 td_lambda: 0.8 # gae lambda
 critic_type: "cv_critic"
 epochs: 4
-eps_clip: 0.2
+eps_clip: 0.1
 name: "mappo"
 
-t_max: 4001000
+t_max: 5001000
 
 # agent: "rnn_2"
 # use_layer_norm: True
