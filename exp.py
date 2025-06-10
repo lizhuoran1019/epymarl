@@ -1,7 +1,7 @@
 import subprocess  # 导入subprocess模块用于创建子进程
 import time
 
-avail_list = [8,7,6,5,4]
+avail_list = [6,7,8,5,4]
 a2_list = [0.4,0.5,0.6,0.7]
 avail_gpu = 8
 

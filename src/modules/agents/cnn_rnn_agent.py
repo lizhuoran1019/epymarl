@@ -51,6 +51,22 @@ class CNNRNNAgent(nn.Module):
             nn.Linear(32, args.n_actions)
         )
         
+        # 初始化权重
+        self.orthogonal_init()
+        
+    def orthogonal_init(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv1d) or isinstance(m, nn.Linear):
+                nn.init.orthogonal_(m.weight)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.GRU):
+                for param in m.parameters():
+                    if len(param.shape) >= 2:
+                        nn.init.orthogonal_(param)
+                    else:
+                        nn.init.constant_(param, 0)
+        
     def init_hidden(self):
         # make hidden states on same device as model
         return None
