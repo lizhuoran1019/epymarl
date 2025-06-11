@@ -9,7 +9,7 @@
             "program": "${workspaceFolder}/src/main-ns3.py",
             "args": [
                 "--config=mappo",
-                "--env-config=ns3_avail_6_a2_0.6",
+                "--env-config=ns3_avail_6_a2_0.7",
                 // "with",
                 // "seed=269218384",
                 // "env_args.segName='seg_1",

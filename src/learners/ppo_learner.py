@@ -169,16 +169,16 @@ class PPOLearner:
         if self.args.standardise_returns:
             target_vals = target_vals * th.sqrt(self.ret_ms.var) + self.ret_ms.mean
 
-        # target_returns = self.nstep_returns(
-        #     rewards, mask, target_vals, self.args.q_nstep
-        # )
-        target_returns = build_gae_targets(
-            rewards,
-            mask,
-            target_vals,
-            self.args.gamma,
-            self.args.td_lambda,
+        target_returns = self.nstep_returns(
+            rewards, mask, target_vals, self.args.q_nstep
         )
+        # target_returns = build_gae_targets(
+        #     rewards,
+        #     mask,
+        #     target_vals,
+        #     self.args.gamma,
+        #     self.args.td_lambda,
+        # )
         if self.args.standardise_returns:
             self.ret_ms.update(target_returns)
             target_returns = (target_returns - self.ret_ms.mean) / th.sqrt(

@@ -141,7 +141,7 @@ class Ns3GymEnv(MultiAgentEnv):
         for key in obs_dict_copy.keys():
             obs_dict_copy[key] = obs_dict_copy[key].reshape(self.n_agents, -1, order="F")
             if key == "channel_energy": # normalize channel_energy
-                obs_dict_copy[key] = obs_dict_copy[key]/100
+                obs_dict_copy[key] = obs_dict_copy[key]/200
             #     mean = obs_dict_copy[key].mean(axis=1, keepdims=True)
             #     std = obs_dict_copy[key].std(axis=1, keepdims=True)
             #     obs_dict_copy[key] = (obs_dict_copy[key] - mean) / (std + 1e-8)  # 防止除以0
