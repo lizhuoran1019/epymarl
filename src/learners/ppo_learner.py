@@ -8,7 +8,7 @@ from components.episode_buffer import EpisodeBatch
 from components.standarize_stream import RunningMeanStd
 from modules.critics import REGISTRY as critic_resigtry
 from utils.rl_utils import build_gae_targets
-from components.epsilon_schedules import DecayThenFlatSchedule as EntropyCoefSchedule
+from components.epsilon_schedules import CosineAnnealingSchedule as EntropyCoefSchedule
 
 
 class PPOLearner:
@@ -43,7 +43,8 @@ class PPOLearner:
         self.entropy_coef_schedule = EntropyCoefSchedule(
             start=args.entropy_coef,
             finish=args.entropy_coef_final,
-            time_length=args.entropy_coef_decay_steps,
+            time_length=args.entropy_coef_decay_steps/4,
+            restart_period=args.entropy_coef_decay_steps/4,
         )
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
@@ -166,6 +167,7 @@ class PPOLearner:
                 (pi.max(dim=-1)[0] * mask).sum().item() / mask.sum().item(),
                 t_env,
             )
+            self.logger.log_stat("entropy_coef", entropy_coef, t_env)
             self.log_stats_t = t_env
 
     def train_critic_sequential(self, critic, target_critic, batch, rewards, mask):

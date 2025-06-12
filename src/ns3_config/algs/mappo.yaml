@@ -37,7 +37,7 @@ t_max: 5001000
 # use_layer_norm: True
 
 common_reward: False  # Run experiment with common reward setup
-entropy_coef: 0.1
+entropy_coef: 1
 entropy_coef_final: 0.1
 entropy_coef_decay_steps: 4000000
 
