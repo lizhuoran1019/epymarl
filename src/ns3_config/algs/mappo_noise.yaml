@@ -41,6 +41,8 @@ common_reward: False  # Run experiment with common reward setup
 noise_dim: 2
 noise_scale: 1
 
-entropy_coef: 0.05
+entropy_coef: 1
+entropy_coef_final: 0.01
+entropy_coef_decay_steps: 4000000
 
 agent: "cnn_rnn"

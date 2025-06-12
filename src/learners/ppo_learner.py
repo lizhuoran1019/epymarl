@@ -8,6 +8,7 @@ from components.episode_buffer import EpisodeBatch
 from components.standarize_stream import RunningMeanStd
 from modules.critics import REGISTRY as critic_resigtry
 from utils.rl_utils import build_gae_targets
+from components.epsilon_schedules import DecayThenFlatSchedule as EntropyCoefSchedule
 
 
 class PPOLearner:
@@ -20,7 +21,7 @@ class PPOLearner:
         self.mac = mac
         self.old_mac = copy.deepcopy(mac)
         self.agent_params = list(mac.parameters())
-        self.agent_optimiser = Adam(params=self.agent_params, lr=args.lr)
+        self.agent_optimiser = Adam(params=self.agent_params, lr=args.lr, weight_decay=0.00001)
 
         self.critic = critic_resigtry[args.critic_type](scheme, args)
         self.target_critic = copy.deepcopy(self.critic)
@@ -38,6 +39,12 @@ class PPOLearner:
         if self.args.standardise_rewards:
             rew_shape = (1,) if self.args.common_reward else (self.n_agents,)
             self.rew_ms = RunningMeanStd(shape=rew_shape, device=device)
+        
+        self.entropy_coef_schedule = EntropyCoefSchedule(
+            start=args.entropy_coef,
+            finish=args.entropy_coef_final,
+            time_length=args.entropy_coef_decay_steps,
+        )
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
         # Get the relevant quantities
@@ -104,9 +111,10 @@ class PPOLearner:
             )
 
             entropy = -th.sum(pi * th.log(pi + 1e-10), dim=-1)
+            entropy_coef = self.entropy_coef_schedule.eval(t_env)
             pg_loss = (
                 -(
-                    (th.min(surr1, surr2) + self.args.entropy_coef * entropy) * mask
+                    (th.min(surr1, surr2) + entropy_coef * entropy) * mask
                 ).sum()
                 / mask.sum()
             )
