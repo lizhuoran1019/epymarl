@@ -8,7 +8,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/main-ns3.py",
             "args": [
-                "--config=mappo",
+                "--config=mappo_noise",
                 "--env-config=ns3_avail_6_a2_0.7",
                 // "with",
                 // "seed=269218384",

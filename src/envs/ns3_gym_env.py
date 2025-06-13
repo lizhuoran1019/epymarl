@@ -57,6 +57,11 @@ class Ns3GymEnv(MultiAgentEnv):
         # 处理info字典
         if isinstance(info, str):
             info = json.loads(info)
+            
+        if terminated: # FIXME: 这里正常应该判断truncated
+            info['episode_limit'] = True
+        else:
+            info['episode_limit'] = False
 
         # 读取当前的info
         pu_rx_count = info['pu_rx_count']

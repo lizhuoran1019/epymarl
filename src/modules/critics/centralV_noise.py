@@ -1,4 +1,4 @@
-# code adapted from https://github.com/AnujMahajanOxf/MAVEN
+# implementation of centralV critic with noise for mappo_noise
 
 import torch as th
 import torch.nn as nn
@@ -12,7 +12,7 @@ class CentralVCriticNoise(nn.Module):
         self.args = args
         self.n_actions = args.n_actions
         self.n_agents = args.n_agents
-
+        
         input_shape = self._get_input_shape(scheme)
         self.output_type = "v"
 
@@ -51,15 +51,16 @@ class CentralVCriticNoise(nn.Module):
                 last_actions = last_actions.view(bs, max_t, 1, -1).repeat(1, 1, self.n_agents, 1)
                 inputs.append(last_actions)
 
+        # 添加智能体ID
         inputs.append(th.eye(self.n_agents, device=batch.device).unsqueeze(0).unsqueeze(0).expand(bs, max_t, -1, -1))
+        
+        # 添加噪声特征（作为拼接，而非叠加）
+        # noise = th.randn(bs, max_t, self.n_agents, self.args.noise_dim, device=batch.device) * self.args.noise_scale
+        noise = th.randn(bs, 1, self.n_agents, self.args.noise_dim, device=batch.device) * self.args.noise_scale
+        noise = noise.repeat(1, max_t, 1, 1)  # 每个时间步都使用相同的噪声
+        inputs.append(noise)
 
         inputs = th.cat(inputs, dim=-1)
-        
-        # noise
-        # noise = th.randn((bs, max_t, self.n_agents, self.args.noise_dim), device=batch.device)
-        noise = th.randn((max_t, self.n_agents, self.args.noise_dim), device=batch.device)
-        noise = noise.unsqueeze(0).expand(bs, -1, -1, -1)  # Expand to match batch size
-        inputs = th.cat([inputs, noise], dim=-1)
         return inputs, bs, max_t
 
     def _get_input_shape(self, scheme):
@@ -71,8 +72,8 @@ class CentralVCriticNoise(nn.Module):
         # last actions
         if self.args.obs_last_action:
             input_shape += scheme["actions_onehot"]["vshape"][0] * self.n_agents
+        # 智能体ID
         input_shape += self.n_agents
-        
-        # noise
+        # 噪声特征
         input_shape += self.args.noise_dim
         return input_shape
