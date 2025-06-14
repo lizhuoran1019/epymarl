@@ -18,13 +18,19 @@ class CentralVCriticNoise(nn.Module):
 
         # Set up network layers
         self.fc1 = nn.Linear(input_shape, args.hidden_dim)
-        self.fc2 = nn.Linear(args.hidden_dim, args.hidden_dim)
-        self.fc3 = nn.Linear(args.hidden_dim, 1)
+        # self.fc2 = nn.Linear(args.hidden_dim, args.hidden_dim)
+        self.gru = nn.GRU(input_size=args.hidden_dim, hidden_size=args.hidden_dim, num_layers=1, batch_first=True, bidirectional=True)
+        self.fc3 = nn.Linear(args.hidden_dim*2, 1)
 
     def forward(self, batch, t=None):
         inputs, bs, max_t = self._build_inputs(batch, t=t)
+        inputs = inputs.permute(0, 2, 1, 3)  # [bs, n_agents, max_t, input_shape]
+        inputs = inputs.reshape(bs * self.n_agents, max_t, -1)  # [bs*n_agents, max_t, input_shape]
         x = F.relu(self.fc1(inputs))
-        x = F.relu(self.fc2(x))
+        # x = F.relu(self.fc2(x))
+        x, _ = self.gru(x, None)
+        x = x.view(bs, self.n_agents, max_t, -1) # [bs, n_agents, max_t, hidden_dim]
+        x = x.permute(0, 2, 1, 3)  # [bs, max_t, n_agents, hidden_dim]
         q = self.fc3(x)
         return q
 
