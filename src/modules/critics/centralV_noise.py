@@ -17,21 +17,37 @@ class CentralVCriticNoise(nn.Module):
         self.output_type = "v"
 
         # Set up network layers
-        self.fc1 = nn.Linear(input_shape, args.hidden_dim)
-        # self.fc2 = nn.Linear(args.hidden_dim, args.hidden_dim)
-        self.gru = nn.GRU(input_size=args.hidden_dim, hidden_size=args.hidden_dim, num_layers=1, batch_first=True, bidirectional=True)
-        self.fc3 = nn.Linear(args.hidden_dim*2, 1)
+        # self.fc1 = nn.Linear(input_shape, args.hidden_dim)
+        self.gru = nn.GRU(input_size=input_shape, hidden_size=args.hidden_dim, num_layers=1, batch_first=True, bidirectional=False)
+        self.layer_norm = nn.LayerNorm(args.hidden_dim)
+        self.fc2 = nn.Sequential(
+            nn.Linear(args.hidden_dim, args.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(args.hidden_dim, 1)
+        )
+        
+        self.__param_init()
+        
+    def __param_init(self):
+        for name, param in self.named_parameters():
+            if 'weight_hh' in name:  # 隐含层权重
+                nn.init.orthogonal_(param)
+            elif 'weight_ih' in name:  # 输入层权重
+                nn.init.xavier_uniform_(param)
+            elif 'bias' in name:
+                nn.init.zeros_(param)  # 偏置置零
 
     def forward(self, batch, t=None):
         inputs, bs, max_t = self._build_inputs(batch, t=t)
         inputs = inputs.permute(0, 2, 1, 3)  # [bs, n_agents, max_t, input_shape]
         inputs = inputs.reshape(bs * self.n_agents, max_t, -1)  # [bs*n_agents, max_t, input_shape]
-        x = F.relu(self.fc1(inputs))
+        # x = F.tanh(self.fc1(inputs))
         # x = F.relu(self.fc2(x))
-        x, _ = self.gru(x, None)
+        x, _ = self.gru(inputs, None)
+        x = self.layer_norm(x)
         x = x.view(bs, self.n_agents, max_t, -1) # [bs, n_agents, max_t, hidden_dim]
         x = x.permute(0, 2, 1, 3)  # [bs, max_t, n_agents, hidden_dim]
-        q = self.fc3(x)
+        q = self.fc2(x)
         return q
 
     def _build_inputs(self, batch, t=None):
