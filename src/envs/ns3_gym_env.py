@@ -106,11 +106,11 @@ class Ns3GymEnv(MultiAgentEnv):
         reward = (
             main_link_rx_count_delta * 2.0
             + sub_link_rx_count_delta * 1.0
-            + np.sum(tx_good) * 0.1
-            - np.sum(tx_error) * 0.2
+            # + np.sum(tx_good * [0.3,0.3,0.3,0.3,0.1,0.1,0.1])
+            - np.sum(tx_error * 0.2)
         )
 
-        reward /= 3.5
+        # reward /= 3.5
 
         return reward
 
@@ -125,12 +125,18 @@ class Ns3GymEnv(MultiAgentEnv):
         tx = [act>0 for act in actions_int]
         tx_error = np.logical_and(tx, np.logical_not(tx_good))  # tx错误
 
+        # reward = (
+        #     main_link_rx_count_delta * 2.0
+        #     + sub_link_rx_count_delta * 1.0
+        #     + tx_good * [0.3,0.3,0.3,0.3,0.1,0.1,0.1]
+        #     - tx_error * 0.2
+        # )
         reward = (
-            main_link_rx_count_delta * 2.0
-            + sub_link_rx_count_delta * 1.0
-            + tx_good * 0.1
+            tx_good * [0.3, 0.3, 0.3, 0.3, 0.1, 0.1, 0.1]
             - tx_error * 0.2
         )
+        reward[:4] += main_link_rx_count_delta * 2.0  # 主链路奖励
+        reward[4:] += sub_link_rx_count_delta * 1.0 # 子链路奖励
 
         # reward /= 3.5
         # reward = reward.reshape(-1, 1)  # 3维 -> 4维

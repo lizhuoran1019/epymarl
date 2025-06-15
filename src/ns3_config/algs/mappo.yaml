@@ -24,9 +24,9 @@ learner: "ppo_learner"
 use_rnn: True
 standardise_returns: False
 standardise_rewards: False
-q_nstep: 10 # 1 corresponds to normal r + gammaV
+q_nstep: 1 # 1 corresponds to normal r + gammaV
 # td_lambda: 0.8 # gae lambda
-critic_type: "cv_critic"
+critic_type: "cv_critic_rnn"
 epochs: 4
 eps_clip: 0.2
 name: "mappo"
@@ -36,7 +36,7 @@ t_max: 5001000
 # agent: "rnn_2"
 # use_layer_norm: True
 
-common_reward: False  # Run experiment with common reward setup
+common_reward: True  # Run experiment with common reward setup
 entropy_coef: 0.05
 
 agent: "cnn_rnn"

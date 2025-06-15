@@ -5,9 +5,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class CentralVCriticNoise(nn.Module):
+class CentralVCriticRNNNoise(nn.Module):
     def __init__(self, scheme, args):
-        super(CentralVCriticNoise, self).__init__()
+        super(CentralVCriticRNNNoise, self).__init__()
 
         self.args = args
         self.n_actions = args.n_actions
@@ -17,8 +17,8 @@ class CentralVCriticNoise(nn.Module):
         self.output_type = "v"
 
         # Set up network layers
-        # self.fc1 = nn.Linear(input_shape, args.hidden_dim)
-        self.gru = nn.GRU(input_size=input_shape, hidden_size=args.hidden_dim, num_layers=1, batch_first=True, bidirectional=False)
+        self.fc1 = nn.Linear(input_shape, args.hidden_dim)
+        self.gru = nn.GRU(input_size=args.hidden_dim, hidden_size=args.hidden_dim, num_layers=1, batch_first=True, bidirectional=False)
         self.layer_norm = nn.LayerNorm(args.hidden_dim)
         self.fc2 = nn.Sequential(
             nn.Linear(args.hidden_dim, args.hidden_dim),
@@ -42,8 +42,8 @@ class CentralVCriticNoise(nn.Module):
         inputs = inputs.permute(0, 2, 1, 3)  # [bs, n_agents, max_t, input_shape]
         inputs = inputs.reshape(bs * self.n_agents, max_t, -1)  # [bs*n_agents, max_t, input_shape]
         # x = F.tanh(self.fc1(inputs))
-        # x = F.relu(self.fc2(x))
-        x, _ = self.gru(inputs, None)
+        x = F.relu(self.fc1(inputs))
+        x, _ = self.gru(x, None)
         x = self.layer_norm(x)
         x = x.view(bs, self.n_agents, max_t, -1) # [bs, n_agents, max_t, hidden_dim]
         x = x.permute(0, 2, 1, 3)  # [bs, max_t, n_agents, hidden_dim]
@@ -77,7 +77,7 @@ class CentralVCriticNoise(nn.Module):
         inputs.append(th.eye(self.n_agents, device=batch.device).unsqueeze(0).unsqueeze(0).expand(bs, max_t, -1, -1))
         
         # 添加噪声特征（作为拼接，而非叠加）
-        # noise = th.randn(bs, max_t, self.n_agents, self.args.noise_dim, device=batch.device) * self.args.noise_scale
+        noise = th.randn(bs, max_t, self.n_agents, self.args.noise_dim, device=batch.device) * self.args.noise_scale
         noise = th.randn(bs, 1, self.n_agents, self.args.noise_dim, device=batch.device) * self.args.noise_scale
         noise = noise.repeat(1, max_t, 1, 1)  # 每个时间步都使用相同的噪声
         inputs.append(noise)
