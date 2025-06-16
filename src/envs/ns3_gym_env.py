@@ -58,10 +58,10 @@ class Ns3GymEnv(MultiAgentEnv):
         if isinstance(info, str):
             info = json.loads(info)
             
-        if terminated: # FIXME: 这里正常应该判断truncated
-            info['episode_limit'] = True
-        else:
-            info['episode_limit'] = False
+        # if terminated: # FIXME: 这里正常应该判断truncated
+        #     info['episode_limit'] = True
+        # else:
+        #     info['episode_limit'] = False
 
         # 读取当前的info
         pu_rx_count = info['pu_rx_count']
@@ -106,7 +106,7 @@ class Ns3GymEnv(MultiAgentEnv):
         reward = (
             main_link_rx_count_delta * 2.0
             + sub_link_rx_count_delta * 1.0
-            # + np.sum(tx_good * [0.3,0.3,0.3,0.3,0.1,0.1,0.1])
+            # + np.sum(tx_good * 0.1)
             - np.sum(tx_error * 0.2)
         )
 
@@ -157,6 +157,8 @@ class Ns3GymEnv(MultiAgentEnv):
             #     std = obs_dict_copy[key].std(axis=1, keepdims=True)
             #     obs_dict_copy[key] = (obs_dict_copy[key] - mean) / (std + 1e-8)  # 防止除以0
         obs = np.concatenate([value for value in obs_dict_copy.values()], axis=1)
+        # 添加归一化的时间步
+        obs = np.column_stack((obs, np.full((self.n_agents, 1), self._episode_steps / self.episode_limit)))
 
         return obs
 
@@ -167,6 +169,7 @@ class Ns3GymEnv(MultiAgentEnv):
             if key == "left_energy_frac":
                 continue
             obs_size += self.env.observation_space.spaces[key].shape[1]
+        obs_size += 1 # 添加归一化的时间步
 
         return obs_size
 
@@ -217,6 +220,7 @@ class Ns3GymEnv(MultiAgentEnv):
         # obs_with_action = np.concatenate((obs, self.__last_action), axis=1)
         # state = obs_with_action.flatten()
         state = obs.flatten()
+        state = np.append(state, self._episode_steps / self.episode_limit)  # 添加归一化的时间步
         return state
 
     def get_state_size(self):
@@ -228,6 +232,7 @@ class Ns3GymEnv(MultiAgentEnv):
             state_size += self.env.observation_space.spaces[key].shape[1]
         state_size *= self.n_agents
         # state_size += self.n_agents * self.n_actions
+        state_size += 1 # 添加归一化的时间步
         return state_size
 
     def get_avail_actions(self):
