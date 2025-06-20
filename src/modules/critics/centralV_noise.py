@@ -5,9 +5,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class CentralVCriticRNN(nn.Module):
+class CentralVCriticNoise(nn.Module):
     def __init__(self, scheme, args):
-        super(CentralVCriticRNN, self).__init__()
+        super(CentralVCriticNoise, self).__init__()
 
         self.args = args
         self.n_actions = args.n_actions
@@ -18,36 +18,14 @@ class CentralVCriticRNN(nn.Module):
 
         # Set up network layers
         self.fc1 = nn.Linear(input_shape, args.hidden_dim)
-        self.gru = nn.GRU(input_size=args.hidden_dim, hidden_size=args.hidden_dim, num_layers=1, batch_first=True, bidirectional=False)
-        self.layer_norm = nn.LayerNorm(args.hidden_dim)
-        self.fc2 = nn.Sequential(
-            nn.Linear(args.hidden_dim, args.hidden_dim),
-            nn.ReLU(),
-            nn.Linear(args.hidden_dim, 1)
-        )
-        
-        self.__param_init()
-        
-    def __param_init(self):
-        for name, param in self.named_parameters():
-            if 'weight_hh' in name:  # 隐含层权重
-                nn.init.orthogonal_(param)
-            elif 'weight_ih' in name:  # 输入层权重
-                nn.init.xavier_uniform_(param)
-            elif 'bias' in name:
-                nn.init.zeros_(param)  # 偏置置零
+        self.fc2 = nn.Linear(args.hidden_dim, args.hidden_dim)
+        self.fc3 = nn.Linear(args.hidden_dim, 1)
 
     def forward(self, batch, t=None):
         inputs, bs, max_t = self._build_inputs(batch, t=t)
-        inputs = inputs.permute(0, 2, 1, 3)  # [bs, n_agents, max_t, input_shape]
-        inputs = inputs.reshape(bs * self.n_agents, max_t, -1)  # [bs*n_agents, max_t, input_shape]
-        x = F.tanh(self.fc1(inputs))
-        # x = F.relu(self.fc1(inputs))
-        x, _ = self.gru(x, None)
-        x = self.layer_norm(x)
-        x = x.view(bs, self.n_agents, max_t, -1) # [bs, n_agents, max_t, hidden_dim]
-        x = x.permute(0, 2, 1, 3)  # [bs, max_t, n_agents, hidden_dim]
-        q = self.fc2(x)
+        x = F.relu(self.fc1(inputs))
+        x = F.relu(self.fc2(x))
+        q = self.fc3(x)
         return q
 
     def _build_inputs(self, batch, t=None):
@@ -76,6 +54,12 @@ class CentralVCriticRNN(nn.Module):
         # 添加智能体ID
         inputs.append(th.eye(self.n_agents, device=batch.device).unsqueeze(0).unsqueeze(0).expand(bs, max_t, -1, -1))
         
+        # 添加噪声特征（作为拼接，而非叠加）
+        noise = th.randn(bs, max_t, self.n_agents, self.args.noise_dim, device=batch.device) * self.args.noise_scale
+        noise = th.randn(bs, 1, self.n_agents, self.args.noise_dim, device=batch.device) * self.args.noise_scale
+        noise = noise.repeat(1, max_t, 1, 1)  # 每个时间步都使用相同的噪声
+        inputs.append(noise)
+
         inputs = th.cat(inputs, dim=-1)
         return inputs, bs, max_t
 
@@ -90,4 +74,6 @@ class CentralVCriticRNN(nn.Module):
             input_shape += scheme["actions_onehot"]["vshape"][0] * self.n_agents
         # 智能体ID
         input_shape += self.n_agents
+        # 噪声特征
+        input_shape += self.args.noise_dim
         return input_shape

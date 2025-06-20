@@ -7,7 +7,8 @@ from torch.optim import Adam
 from components.episode_buffer import EpisodeBatch
 from components.standarize_stream import RunningMeanStd
 from modules.critics import REGISTRY as critic_resigtry
-from utils.rl_utils import build_gae_targets
+# lr scheduler
+from torch.optim.lr_scheduler import LinearLR
 
 
 class PPOLearner:
@@ -21,12 +22,14 @@ class PPOLearner:
         self.old_mac = copy.deepcopy(mac)
         self.agent_params = list(mac.parameters())
         self.agent_optimiser = Adam(params=self.agent_params, lr=args.lr)
+        self.agent_lr_scheduler = LinearLR(self.agent_optimiser, start_factor=1, end_factor=0.01, total_iters=1000 * args.epochs)
 
         self.critic = critic_resigtry[args.critic_type](scheme, args)
         self.target_critic = copy.deepcopy(self.critic)
 
         self.critic_params = list(self.critic.parameters())
         self.critic_optimiser = Adam(params=self.critic_params, lr=args.lr)
+        self.critic_lr_scheduler = LinearLR(self.critic_optimiser, start_factor=1, end_factor=0.01, total_iters=1000 * args.epochs)
 
         self.last_target_update_step = 0
         self.critic_training_steps = 0
@@ -38,6 +41,13 @@ class PPOLearner:
         if self.args.standardise_rewards:
             rew_shape = (1,) if self.args.common_reward else (self.n_agents,)
             self.rew_ms = RunningMeanStd(shape=rew_shape, device=device)
+            
+        # Log GAE configuration
+        if hasattr(args, 'use_gae') and args.use_gae:
+            gae_lambda = getattr(args, 'gae_lambda', 0.95)
+            self.logger.console_logger.info(f"GAE enabled with lambda={gae_lambda}")
+        else:
+            self.logger.console_logger.info("Using n-step returns (GAE disabled)")
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
         # Get the relevant quantities
@@ -118,6 +128,7 @@ class PPOLearner:
                 self.agent_params, self.args.grad_norm_clip
             )
             self.agent_optimiser.step()
+            # self.agent_lr_scheduler.step()
 
         self.old_mac.load_state(self.mac)
 
@@ -169,16 +180,29 @@ class PPOLearner:
         if self.args.standardise_returns:
             target_vals = target_vals * th.sqrt(self.ret_ms.var) + self.ret_ms.mean
 
-        target_returns = self.nstep_returns(
-            rewards, mask, target_vals, self.args.q_nstep
-        )
-        # target_returns = build_gae_targets(
-        #     rewards,
-        #     mask,
-        #     target_vals,
-        #     self.args.gamma,
-        #     self.args.td_lambda,
-        # )
+        v = critic(batch)[:, :-1].squeeze(3)
+        
+        # Use GAE if enabled, otherwise use n-step returns
+        if getattr(self.args, 'use_gae', False):
+            # Compute advantages using GAE
+            gae_lambda = getattr(self.args, 'gae_lambda', 0.95)
+            terminated = batch["terminated"][:, :-1].float()
+            # Expand terminated to match agent dimension
+            if terminated.size(2) == 1 and self.n_agents > 1:
+                terminated = terminated.expand(-1, -1, self.n_agents)
+            # Use target values for GAE computation (more stable)
+            # Pass complete target_vals so GAE can access next timestep values
+            advantages, target_returns = self.compute_gae(
+                rewards, target_vals, mask, terminated, self.args.gamma, gae_lambda
+            )
+        else:
+            # Use original n-step returns method
+            target_returns = self.nstep_returns(
+                rewards, mask, target_vals, self.args.q_nstep
+            )
+            # Advantages are just TD errors
+            advantages = target_returns.detach() - v
+
         if self.args.standardise_returns:
             self.ret_ms.update(target_returns)
             target_returns = (target_returns - self.ret_ms.mean) / th.sqrt(
@@ -193,7 +217,6 @@ class PPOLearner:
             "q_taken_mean": [],
         }
 
-        v = critic(batch)[:, :-1].squeeze(3)
         td_error = target_returns.detach() - v
         masked_td_error = td_error * mask
         loss = (masked_td_error**2).sum() / mask.sum()
@@ -204,6 +227,7 @@ class PPOLearner:
             self.critic_params, self.args.grad_norm_clip
         )
         self.critic_optimiser.step()
+        # self.critic_lr_scheduler.step() 
 
         running_log["critic_loss"].append(loss.item())
         running_log["critic_grad_norm"].append(grad_norm.item())
@@ -216,7 +240,7 @@ class PPOLearner:
             (target_returns * mask).sum().item() / mask_elems
         )
 
-        return masked_td_error, running_log
+        return advantages, running_log
 
     def nstep_returns(self, rewards, mask, values, nsteps):
         nstep_values = th.zeros_like(values[:, :-1])
@@ -241,6 +265,62 @@ class PPOLearner:
                     )
             nstep_values[:, t_start, :] = nstep_return_t
         return nstep_values
+
+    def compute_gae(self, rewards, target_values, mask, terminated, gamma=0.99, gae_lambda=0.95):
+        """
+        Compute Generalized Advantage Estimation (GAE)
+        
+        Args:
+            rewards: rewards tensor [batch_size, episode_length, n_agents]
+            target_values: target value function estimates [batch_size, episode_length+1, n_agents]  
+            mask: mask tensor [batch_size, episode_length, n_agents]
+            terminated: terminated tensor [batch_size, episode_length, n_agents]
+            gamma: discount factor
+            gae_lambda: GAE lambda parameter
+            
+        Returns:
+            advantages: GAE advantages [batch_size, episode_length, n_agents]
+            returns: value targets [batch_size, episode_length, n_agents]
+        """
+        batch_size, episode_length, n_agents = rewards.shape
+        advantages = th.zeros_like(rewards)
+        
+        # Extract current and next values
+        current_values = target_values[:, :-1]  # [batch_size, episode_length, n_agents]
+        next_values = target_values[:, 1:]      # [batch_size, episode_length, n_agents]
+        
+        # Initialize the last advantage to 0
+        last_gae_lam = th.zeros(batch_size, n_agents, device=rewards.device)
+        
+        for t in reversed(range(episode_length)):
+            # Only compute GAE for valid timesteps (where mask is 1)
+            valid_timestep = mask[:, t]
+            
+            # Calculate next value, accounting for episode termination
+            if t == episode_length - 1:
+                # At the last timestep, there's no next value
+                next_non_terminal = th.zeros_like(terminated[:, t])
+                next_val = th.zeros_like(current_values[:, t])
+            else:
+                # Episode continues if not terminated and next timestep is valid
+                next_non_terminal = (1.0 - terminated[:, t]) * valid_timestep
+                next_val = next_values[:, t]
+            
+            # Calculate temporal difference error only for valid timesteps
+            delta = (rewards[:, t] + gamma * next_val * next_non_terminal - current_values[:, t]) * valid_timestep
+            
+            # Calculate GAE - advantage accumulation is reset when episode terminates
+            last_gae_lam = delta + gamma * gae_lambda * next_non_terminal * last_gae_lam
+            advantages[:, t] = last_gae_lam
+            
+        # Returns are advantages + current values
+        returns = advantages + current_values
+        
+        # Apply mask to both advantages and returns
+        advantages = advantages * mask
+        returns = returns * mask
+            
+        return advantages, returns
 
     def _update_targets(self):
         self.target_critic.load_state_dict(self.critic.state_dict())

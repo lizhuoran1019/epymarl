@@ -96,10 +96,11 @@ class Ns3GymEnv(MultiAgentEnv):
         """ Calculate the reward based on the current observation and actions """
         main_link_rx_count_delta = info['main_link_rx_count'] - self.last_info.get('main_link_rx_count', 0)
         sub_link_rx_count_delta = info['sub_link_rx_count'] - self.last_info.get('sub_link_rx_count', 0)
-        rx_good = obs_dict['rx_good']
-        tx_good = np.roll(rx_good, shift=-1, axis=0)  # 假设tx_good是rx_good的前一个状态
-        tx_good[3] = main_link_rx_count_delta
-        tx_good[6] = sub_link_rx_count_delta
+        # rx_good = obs_dict['rx_good']
+        # tx_good = np.roll(rx_good, shift=-1, axis=0)  # 假设tx_good是rx_good的前一个状态
+        # tx_good[3] = main_link_rx_count_delta
+        # tx_good[6] = sub_link_rx_count_delta
+        tx_good = obs_dict['tx_good_per_step']
         tx = [act>0 for act in actions_int]
         tx_error = np.logical_and(tx, np.logical_not(tx_good))  # tx错误
 
@@ -110,7 +111,7 @@ class Ns3GymEnv(MultiAgentEnv):
             - np.sum(tx_error * 0.2)
         )
 
-        # reward /= 3.5
+        reward /= 3
 
         return reward
 
@@ -118,25 +119,26 @@ class Ns3GymEnv(MultiAgentEnv):
         """ Calculate the reward based on the current observation and actions """
         main_link_rx_count_delta = info['main_link_rx_count'] - self.last_info.get('main_link_rx_count', 0)
         sub_link_rx_count_delta = info['sub_link_rx_count'] - self.last_info.get('sub_link_rx_count', 0)
-        rx_good = obs_dict['rx_good']
-        tx_good = np.roll(rx_good, shift=-1, axis=0)  # 假设tx_good是rx_good的前一个状态
-        tx_good[3] = main_link_rx_count_delta
-        tx_good[6] = sub_link_rx_count_delta
+        # rx_good = obs_dict['rx_good']
+        # tx_good = np.roll(rx_good, shift=-1, axis=0)  # 假设tx_good是rx_good的前一个状态
+        # tx_good[3] = main_link_rx_count_delta
+        # tx_good[6] = sub_link_rx_count_delta
+        tx_good = obs_dict['tx_good_per_step']  
         tx = [act>0 for act in actions_int]
         tx_error = np.logical_and(tx, np.logical_not(tx_good))  # tx错误
 
-        # reward = (
-        #     main_link_rx_count_delta * 2.0
-        #     + sub_link_rx_count_delta * 1.0
-        #     + tx_good * [0.3,0.3,0.3,0.3,0.1,0.1,0.1]
-        #     - tx_error * 0.2
-        # )
         reward = (
-            tx_good * [0.3, 0.3, 0.3, 0.3, 0.1, 0.1, 0.1]
+            main_link_rx_count_delta * 2.0
+            + sub_link_rx_count_delta * 1.0
+            + tx_good * 0.1
             - tx_error * 0.2
         )
-        reward[:4] += main_link_rx_count_delta * 2.0  # 主链路奖励
-        reward[4:] += sub_link_rx_count_delta * 1.0 # 子链路奖励
+        # reward = (
+        #     tx_good * [0.3, 0.3, 0.3, 0.3, 0.1, 0.1, 0.1]
+        #     - tx_error * 0.2
+        # )
+        # reward[:4] += main_link_rx_count_delta * 2.0  # 主链路奖励
+        # reward[4:] += sub_link_rx_count_delta * 1.0 # 子链路奖励
 
         # reward /= 3.5
         # reward = reward.reshape(-1, 1)  # 3维 -> 4维
@@ -147,7 +149,9 @@ class Ns3GymEnv(MultiAgentEnv):
         """ Returns all agent observations in a list """
         obs_dict,_,_,_ = self.env.get_state()
         obs_dict_copy = obs_dict.copy()
-        # obs_dict_copy.pop("rx_good")  # 删除rx_good
+        obs_dict_copy.pop("tx_good_per_step")  # 删除tx_good
+        obs_dict_copy.pop("tx_num")  # 删除tx_num
+        obs_dict_copy.pop("tx_good_num")  # 删除tx_good_num
         obs_dict_copy.pop("left_energy_frac")  # 删除left_energy
         for key in obs_dict_copy.keys():
             obs_dict_copy[key] = obs_dict_copy[key].reshape(self.n_agents, -1, order="F")
@@ -158,7 +162,7 @@ class Ns3GymEnv(MultiAgentEnv):
             #     obs_dict_copy[key] = (obs_dict_copy[key] - mean) / (std + 1e-8)  # 防止除以0
         obs = np.concatenate([value for value in obs_dict_copy.values()], axis=1)
         # 添加归一化的时间步
-        obs = np.column_stack((obs, np.full((self.n_agents, 1), self._episode_steps / self.episode_limit)))
+        # obs = np.column_stack((obs, np.full((self.n_agents, 1), self._episode_steps / self.episode_limit)))
 
         return obs
 
@@ -166,10 +170,10 @@ class Ns3GymEnv(MultiAgentEnv):
         """ Returns the shape of the observation """
         obs_size = 0
         for key in self.env.observation_space.spaces.keys():
-            if key == "left_energy_frac":
+            if key == "left_energy_frac" or key == "tx_good_per_step" or key == "tx_num" or key == "tx_good_num":
                 continue
             obs_size += self.env.observation_space.spaces[key].shape[1]
-        obs_size += 1 # 添加归一化的时间步
+        # obs_size += 1 # 添加归一化的时间步
 
         return obs_size
 
@@ -210,29 +214,35 @@ class Ns3GymEnv(MultiAgentEnv):
 
     def get_state(self):
         obs_dict,_,_,_ = self.env.get_state()
-        obs_dict_copy = obs_dict.copy()
-        obs_dict_copy.pop("rx_good")  # 删除rx_good
-        obs_dict_copy.pop("channel_energy")  # 删除channel_energy
-        obs_dict_copy.pop("left_energy_frac")  # 删除left_energy
-        for key in obs_dict_copy.keys():
-            obs_dict_copy[key] = obs_dict_copy[key].reshape(self.n_agents, -1, order="F")
-        obs = np.concatenate([value for value in obs_dict_copy.values()], axis=1)
+        state_dict = {}
+        for key in obs_dict.keys():
+            if key == "queue_size":
+                state_dict[key] = obs_dict[key].reshape(self.n_agents, -1, order="F")
+            if key == "tx_num" or key == "tx_good_num":
+                state_dict[key] = obs_dict[key].reshape(self.n_agents, -1, order="F") / 500
+        state = np.concatenate([value for value in state_dict.values()], axis=1)
         # obs_with_action = np.concatenate((obs, self.__last_action), axis=1)
         # state = obs_with_action.flatten()
-        state = obs.flatten()
+        state = state.flatten()
         state = np.append(state, self._episode_steps / self.episode_limit)  # 添加归一化的时间步
+        # # 添加归一化主链路和子链路的接收计数
+        # state = np.append(state, self.last_info.get('main_link_rx_count', 0) / 50)
+        # state = np.append(state, self.last_info.get('sub_link_rx_count', 0) / 50)
+        # # 添加丢包率
+        # state = np.append(state, self.last_info.get('loss_rate', 0.0))
         return state
 
     def get_state_size(self):
         """ Returns the shape of the state"""
         state_size = 0
         for key in self.env.observation_space.spaces.keys():
-            if key == "left_energy_frac" or key == "channel_energy" or key == "rx_good":
-                continue
-            state_size += self.env.observation_space.spaces[key].shape[1]
+            if key == "queue_size" or key == "tx_num" or key == "tx_good_num":
+                state_size += self.env.observation_space.spaces[key].shape[1]
         state_size *= self.n_agents
         # state_size += self.n_agents * self.n_actions
         state_size += 1 # 添加归一化的时间步
+        # state_size += 2 # 添加主链路和子链路的接收计数
+        # state_size += 1 # 添加丢包率
         return state_size
 
     def get_avail_actions(self):

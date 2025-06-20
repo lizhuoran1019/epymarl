@@ -1,4 +1,4 @@
-# --- MAPPO specific parameters ---
+# --- MAPPO with GAE specific parameters ---
 
 action_selector: "soft_policies"
 mask_before_softmax: True
@@ -24,14 +24,17 @@ learner: "ppo_learner"
 use_rnn: True
 standardise_returns: False
 standardise_rewards: False
-q_nstep: 1 # 1 corresponds to normal r + gammaV
-use_gae: False  # Set to True to enable Generalized Advantage Estimation
-gae_lambda: 0.9  # GAE lambda parameter (only used when use_gae=True)
+q_nstep: 5 # 1 corresponds to normal r + gammaV (not used when GAE is enabled)
+gamma: 0.99
 
-critic_type: "cv_critic_rnn_noise"
+# GAE options
+use_gae: True  # Enable Generalized Advantage Estimation
+gae_lambda: 0.95  # GAE lambda parameter for bias-variance tradeoff
+
+critic_type: "cv_critic_rnn"
 epochs: 4
 eps_clip: 0.2
-name: "mappo_noise"
+name: "mappo_gae"
 
 t_max: 5001000
 
@@ -39,10 +42,4 @@ t_max: 5001000
 # use_layer_norm: True
 
 common_reward: True  # Run experiment with common reward setup
-
-noise_dim: 2
-noise_scale: 1
-
 entropy_coef: 0.05
-
-agent: "cnn_rnn"

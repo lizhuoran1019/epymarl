@@ -29,6 +29,11 @@ q_nstep: 5 # 1 corresponds to normal r + gammaV
 critic_type: "cv_critic"
 epochs: 4
 eps_clip: 0.2
+
+# GAE options
+use_gae: False  # Set to True to enable Generalized Advantage Estimation
+gae_lambda: 0.95  # GAE lambda parameter (only used when use_gae=True)
+
 name: "mappo"
 
 t_max: 20050000
