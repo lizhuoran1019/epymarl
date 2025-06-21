@@ -10,7 +10,7 @@ for avail in avail_list:
     for a2 in a2_list:
         env_name = f"ns3_avail_{avail}_a2_{a2}"
         # 开启一个子进程执行命令
-        cmd = f"python src/main-ns3.py --config=mappo --env-config={env_name} with save_model=True"
+        cmd = f"python src/main-ns3.py --config=mappo_noise --env-config={env_name} with save_model=True t_max=2001000"
         for i in range(avail_gpu):
             cmd_gpu = f"CUDA_VISIBLE_DEVICES={i} {cmd} > /dev/null 2>&1"
             print(f"执行命令: {cmd_gpu}")

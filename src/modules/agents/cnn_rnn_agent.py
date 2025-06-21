@@ -14,15 +14,15 @@ class CNNRNNAgent(nn.Module):
         self.cnn = nn.Sequential(
             # 输入: [batch*args, 1, time_shape]
             nn.Conv1d(input_channels, 16, kernel_size=3, padding=1),
-            # nn.BatchNorm1d(16),
+            nn.BatchNorm1d(16),
             # nn.ReLU(),
             nn.Tanh(),
-            # nn.MaxPool1d(kernel_size=2),  # 输出: [batch, 16, 5]
+            nn.MaxPool1d(kernel_size=2),  # 输出: [batch, 16, 5]
             
-            # nn.Conv1d(16, 32, kernel_size=3, padding=1),
-            # nn.BatchNorm1d(32),
-            # nn.ReLU(),
-            # nn.MaxPool1d(2)  # 输出: [batch, 32, 2]
+            nn.Conv1d(16, 32, kernel_size=3, padding=1),
+            nn.BatchNorm1d(32),
+            nn.Tanh(),
+            nn.MaxPool1d(2)  # 输出: [batch, 32, 2]
         )
         
         # 计算CNN输出维度
