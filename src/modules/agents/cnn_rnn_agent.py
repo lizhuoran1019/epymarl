@@ -21,17 +21,19 @@ class CNNRNNAgent(nn.Module):
             
             nn.Conv1d(16, 32, kernel_size=3, padding=1),
             nn.BatchNorm1d(32),
+            # nn.ReLU(),
             nn.Tanh(),
             nn.MaxPool1d(2)  # 输出: [batch, 32, 2]
         )
         
         # 计算CNN输出维度
+        extra_features = input_shape - args.time_shape
         with torch.no_grad():
             dummy = torch.randn(1, input_channels, args.time_shape)
             cnn_out = self.cnn(dummy)
-            self.cnn_output_size = cnn_out.size(1) * cnn_out.size(2)  # 全连接备用
-            self.gru_input_size = cnn_out.size(1)  # GRU输入特征维度
-            self.gru_seq_length = cnn_out.size(2)   # GRU输入序列长度
+            # self.cnn_output_size = cnn_out.size(1) * cnn_out.size(2)  # 全连接备用
+            self.gru_input_size = cnn_out.size(1) + extra_features  # GRU输入特征维度
+            # self.gru_seq_length = cnn_out.size(2)   # GRU输入序列长度
         
         # GRU时序建模部分
         self.gru = nn.GRU(
@@ -43,9 +45,8 @@ class CNNRNNAgent(nn.Module):
         )
         
         # 分类器
-        extra_features = input_shape - args.time_shape
         self.fc = nn.Sequential(
-            nn.Linear(args.hidden_dim*2+extra_features, 32),
+            nn.Linear(args.hidden_dim*2, 32),
             nn.ReLU(),
             # nn.Dropout(0.3),
             nn.Linear(32, args.n_actions)
@@ -80,6 +81,8 @@ class CNNRNNAgent(nn.Module):
         
         # 准备GRU输入: [batch*agnet, channels, timesteps] -> [batch*agent, timesteps, channels]
         gru_input = cnn_out.permute(0, 2, 1)  # [batch*agent, 2, 32]
+        x_non_time = inputs[:, self.args.time_shape:].unsqueeze(1).repeat(1, gru_input.size(1), 1)  # [batch*agent, 2, extra_features]
+        gru_input = torch.cat((gru_input, x_non_time), dim=-1)
         
         # GRU处理
         gru_out, h = self.gru(gru_input, hidden_state)  # gru_out形状: [batch, 2, 64]
@@ -88,9 +91,7 @@ class CNNRNNAgent(nn.Module):
         last_output = gru_out[:, -1, :]  # [batch, 64]
         
         # 全连接分类器
-        x_non_time = inputs[:, self.args.time_shape:]
-        last_output_concated = torch.cat((last_output, x_non_time), dim=1)  # [batch, 64 + (e - time_shape)]
-        q = self.fc(last_output_concated)  # [batch, n_actions]
+        q = self.fc(last_output)  # [batch, n_actions]
         
         # 分类
         return q, h  # 返回形状: [batch, agent, n_actions], [batch, agent, hidden_dim]

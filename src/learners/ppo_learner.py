@@ -169,6 +169,11 @@ class PPOLearner:
                 (pi.max(dim=-1)[0] * mask).sum().item() / mask.sum().item(),
                 t_env,
             )
+            self.logger.log_stat(
+                "entropy",
+                (entropy * mask).sum().item() / mask.sum().item(),
+                t_env,
+            )
             self.log_stats_t = t_env
 
     def train_critic_sequential(self, critic, target_critic, batch, rewards, mask):
