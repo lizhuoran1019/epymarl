@@ -23,7 +23,7 @@ class CNNRNNAgent(nn.Module):
             nn.BatchNorm1d(32),
             # nn.ReLU(),
             nn.Tanh(),
-            nn.MaxPool1d(2)  # 输出: [batch, 32, 2]
+            # nn.MaxPool1d(2)  # 输出: [batch, 32, 2]
         )
         
         # 计算CNN输出维度

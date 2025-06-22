@@ -46,6 +46,7 @@ optim_alpha: 0.99 # RMSProp alpha
 optim_eps: 0.00001 # RMSProp epsilon
 grad_norm_clip: 10 # Reduce magnitude of gradients above this L2 norm
 add_value_last_step: True
+pg_loss_coef: 1.0 # Coefficient for the policy gradient loss
 
 # --- Agent parameters ---
 agent: "rnn" # Default rnn agent

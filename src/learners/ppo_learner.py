@@ -119,7 +119,7 @@ class PPOLearner:
                     (th.min(surr1, surr2) + self.args.entropy_coef * entropy) * mask
                 ).sum()
                 / mask.sum()
-            )
+            ) * self.args.pg_loss_coef
 
             # Optimise agents
             self.agent_optimiser.zero_grad()
