@@ -21,7 +21,7 @@ class CentralVCriticRNNNoise(nn.Module):
         self.gru = nn.GRU(input_size=args.hidden_dim, hidden_size=args.hidden_dim, num_layers=1, batch_first=True, bidirectional=False)
         self.layer_norm = nn.LayerNorm(args.hidden_dim)
         self.fc2 = nn.Sequential(
-            nn.Linear(args.hidden_dim, args.hidden_dim),
+            nn.Linear(args.hidden_dim+self.n_agents, args.hidden_dim),
             nn.ReLU(),
             nn.Linear(args.hidden_dim, 1)
         )
@@ -41,10 +41,13 @@ class CentralVCriticRNNNoise(nn.Module):
         inputs, bs, max_t = self._build_inputs(batch, t=t)
         inputs = inputs.permute(0, 2, 1, 3)  # [bs, n_agents, max_t, input_shape]
         inputs = inputs.reshape(bs * self.n_agents, max_t, -1)  # [bs*n_agents, max_t, input_shape]
-        # x = F.tanh(self.fc1(inputs))
-        x = F.relu(self.fc1(inputs))
+        x = F.tanh(self.fc1(inputs)) 
+        # x = F.relu(self.fc1(inputs))
+        #  添加ID
         x, _ = self.gru(x, None)
-        x = self.layer_norm(x)
+        # x = self.layer_norm(x)
+        agent_ids = th.eye(self.n_agents, device=batch.device).unsqueeze(1).repeat(bs, max_t, 1)  # [bs*n_agents, max_t, n_agents]
+        x = th.cat((x, agent_ids), dim=-1)  # [bs*n_agents, max_t, hidden_dim + n_agents]
         x = x.view(bs, self.n_agents, max_t, -1) # [bs, n_agents, max_t, hidden_dim]
         x = x.permute(0, 2, 1, 3)  # [bs, max_t, n_agents, hidden_dim]
         q = self.fc2(x)
@@ -73,8 +76,8 @@ class CentralVCriticRNNNoise(nn.Module):
                 last_actions = last_actions.view(bs, max_t, 1, -1).repeat(1, 1, self.n_agents, 1)
                 inputs.append(last_actions)
 
-        # 添加智能体ID
-        inputs.append(th.eye(self.n_agents, device=batch.device).unsqueeze(0).unsqueeze(0).expand(bs, max_t, -1, -1))
+        # # 添加智能体ID
+        # inputs.append(th.eye(self.n_agents, device=batch.device).unsqueeze(0).unsqueeze(0).expand(bs, max_t, -1, -1))
         
         # 添加噪声特征（作为拼接，而非叠加）
         noise = th.randn(bs, max_t, self.n_agents, self.args.noise_dim, device=batch.device) * self.args.noise_scale
@@ -95,7 +98,7 @@ class CentralVCriticRNNNoise(nn.Module):
         if self.args.obs_last_action:
             input_shape += scheme["actions_onehot"]["vshape"][0] * self.n_agents
         # 智能体ID
-        input_shape += self.n_agents
+        # input_shape += self.n_agents
         # 噪声特征
         input_shape += self.args.noise_dim
         return input_shape

@@ -105,13 +105,13 @@ class Ns3GymEnv(MultiAgentEnv):
         tx_error = np.logical_and(tx, np.logical_not(tx_good))  # tx错误
 
         reward = (
-            main_link_rx_count_delta * 2.0
+            main_link_rx_count_delta * 3.0
             + sub_link_rx_count_delta * 1.0
-            # + np.sum(tx_good * 0.1)
+            + np.sum(tx_good * 0.075)
             - np.sum(tx_error * 0.2)
         )
 
-        reward /= 3
+        # reward /= 3
 
         return reward
 
@@ -127,9 +127,13 @@ class Ns3GymEnv(MultiAgentEnv):
         tx = [act>0 for act in actions_int]
         tx_error = np.logical_and(tx, np.logical_not(tx_good))  # tx错误
 
+        # 使用NumPy数组进行元素级别的乘法运算
+        main_link_rewards = main_link_rx_count_delta * np.array([0.5, 0.5, 0.5, 0.5, 0.1, 0.1, 0.1])
+        sub_link_rewards = sub_link_rx_count_delta * np.array([0.1, 0.1, 0.1, 0.1, 0.3, 0.3, 0.3])
+        
         reward = (
-            main_link_rx_count_delta * 2.0
-            + sub_link_rx_count_delta * 1.0
+            main_link_rewards
+            + sub_link_rewards
             + tx_good * 0.1
             - tx_error * 0.2
         )

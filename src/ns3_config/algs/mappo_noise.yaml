@@ -16,24 +16,25 @@ lr: 0.01
 hidden_dim: 64
 
 obs_agent_id: True
-obs_last_action: True
+obs_last_action: False
 obs_individual_obs: False
 
 agent_output_type: "pi_logits"
 learner: "ppo_learner"
 use_rnn: True
 standardise_returns: False
-standardise_rewards: False
-q_nstep: 5 # 1 corresponds to normal r + gammaV
+standardise_rewards: True
+q_nstep: 3 # 1 corresponds to normal r + gammaV
+add_value_last_step: False
 gamma: 0.99
 
 # GAE options
-use_gae: False  # Set to True to enable Generalized Advantage Estimation
+use_gae: True  # Set to True to enable Generalized Advantage Estimation
 gae_lambda: 0.95  # GAE lambda parameter (only used when use_gae=True)
 
 critic_type: "cv_critic_rnn_noise"
 epochs: 4
-eps_clip: 0.3
+eps_clip: 0.2
 name: "mappo_noise"
 
 t_max: 5001000
@@ -41,11 +42,12 @@ t_max: 5001000
 # agent: "rnn_2"
 # use_layer_norm: True
 
-common_reward: False  # Run experiment with common reward setup
+common_reward: True  # Run experiment with common reward setup
 
 noise_dim: 10
 noise_scale: 0.5
 
-entropy_coef: 0.03
+entropy_coef: 0.1
 
 agent: "cnn_rnn"
+pg_loss_coef: 10.0  # Coefficient for the policy gradient loss

@@ -17,7 +17,7 @@ class CNNRNNAgent(nn.Module):
             nn.BatchNorm1d(16),
             # nn.ReLU(),
             nn.Tanh(),
-            nn.MaxPool1d(kernel_size=2),  # 输出: [batch, 16, 5]
+            # nn.MaxPool1d(kernel_size=2),  # 输出: [batch, 16, 5]
             
             nn.Conv1d(16, 32, kernel_size=3, padding=1),
             nn.BatchNorm1d(32),
