@@ -33,8 +33,8 @@ use_gae: True  # Set to True to enable Generalized Advantage Estimation
 gae_lambda: 0.95  # GAE lambda parameter (only used when use_gae=True)
 
 critic_type: "cv_critic_rnn_noise"
-epochs: 10
-eps_clip: 0.1
+epochs: 4
+eps_clip: 0.2
 name: "mappo_noise"
 
 t_max: 5001000
@@ -47,7 +47,9 @@ common_reward: True  # Run experiment with common reward setup
 noise_dim: 10
 noise_scale: 0.5
 
-entropy_coef: 0.01
+entropy_coef_start: 0.04
+entropy_coef_end: 0.01
+entropy_coef_decay_steps: 250
 
 agent: "cnn_rnn"
 pg_loss_coef: 1.0  # Coefficient for the policy gradient loss

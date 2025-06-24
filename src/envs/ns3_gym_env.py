@@ -107,8 +107,8 @@ class Ns3GymEnv(MultiAgentEnv):
         reward = (
             main_link_rx_count_delta * 3.0
             + sub_link_rx_count_delta * 1.0
-            # + np.sum(tx_good * 0.075)
-            - np.sum(tx_error * 0.1)
+            # + np.sum(tx_good * 0.1)
+            - np.sum(tx_error * 0.05)
         )
 
         # reward /= 3

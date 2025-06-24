@@ -35,6 +35,12 @@ class PPOLearner:
         self.critic_training_steps = 0
         self.log_stats_t = -self.args.learner_log_interval - 1
 
+        # Entropy coefficient decay parameters
+        self.entropy_coef_start = getattr(args, 'entropy_coef_start', 0.03)
+        self.entropy_coef_end = getattr(args, 'entropy_coef_end', 0.01)
+        self.entropy_coef_decay_steps = getattr(args, 'entropy_coef_decay_steps', 200)
+        self.training_steps = 0
+
         device = "cuda" if args.use_cuda else "cpu"
         if self.args.standardise_returns:
             self.ret_ms = RunningMeanStd(shape=(self.n_agents,), device=device)
@@ -48,6 +54,14 @@ class PPOLearner:
             self.logger.console_logger.info(f"GAE enabled with lambda={gae_lambda}")
         else:
             self.logger.console_logger.info("Using n-step returns (GAE disabled)")
+
+    def _get_current_entropy_coef(self):
+        """Calculate current entropy coefficient with linear decay"""
+        if self.training_steps >= self.entropy_coef_decay_steps:
+            return self.entropy_coef_end
+        
+        decay_ratio = self.training_steps / self.entropy_coef_decay_steps
+        return self.entropy_coef_start + (self.entropy_coef_end - self.entropy_coef_start) * decay_ratio
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
         # Get the relevant quantities
@@ -114,9 +128,13 @@ class PPOLearner:
             )
 
             entropy = -th.sum(pi * th.log(pi + 1e-10), dim=-1)
+            
+            # Get current entropy coefficient with decay
+            current_entropy_coef = self._get_current_entropy_coef()
+            
             pg_loss = (
                 -(
-                    (th.min(surr1, surr2) + self.args.entropy_coef * entropy) * mask
+                    (th.min(surr1, surr2) + current_entropy_coef * entropy) * mask
                 ).sum()
                 / mask.sum()
             ) * self.args.pg_loss_coef
@@ -131,6 +149,7 @@ class PPOLearner:
             self.agent_lr_scheduler.step()
 
         self.old_mac.load_state(self.mac)
+        self.training_steps += 1
 
         self.critic_training_steps += 1
         if (
@@ -174,6 +193,7 @@ class PPOLearner:
                 (entropy * mask).sum().item() / mask.sum().item(),
                 t_env,
             )
+            self.logger.log_stat("entropy_coef", current_entropy_coef, t_env)
             self.log_stats_t = t_env
 
     def train_critic_sequential(self, critic, target_critic, batch, rewards, mask):
