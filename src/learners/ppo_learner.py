@@ -185,7 +185,7 @@ class PPOLearner:
         if self.args.standardise_returns:
             target_vals = target_vals * th.sqrt(self.ret_ms.var) + self.ret_ms.mean
 
-        v = critic(batch)[:, :-1].squeeze(3)
+        v = critic(batch).squeeze(3)
         
         # Use GAE if enabled, otherwise use n-step returns
         if getattr(self.args, 'use_gae', False):
@@ -198,7 +198,7 @@ class PPOLearner:
             # Use target values for GAE computation (more stable)
             # Pass complete target_vals so GAE can access next timestep values
             advantages, target_returns = self.compute_gae(
-                rewards, target_vals, mask, terminated, self.args.gamma, gae_lambda
+                rewards, v, mask, terminated, self.args.gamma, gae_lambda
             )
         else:
             # Use original n-step returns method
@@ -206,7 +206,7 @@ class PPOLearner:
                 rewards, mask, target_vals, self.args.q_nstep
             )
             # Advantages are just TD errors
-            advantages = target_returns.detach() - v
+            advantages = target_returns.detach() - v[:, :-1]
 
         if self.args.standardise_returns:
             self.ret_ms.update(target_returns)
@@ -222,7 +222,7 @@ class PPOLearner:
             "q_taken_mean": [],
         }
 
-        td_error = target_returns.detach() - v
+        td_error = target_returns.detach() - v[:, :-1]
         masked_td_error = td_error * mask
         loss = (masked_td_error**2).sum() / mask.sum()
 
@@ -240,7 +240,7 @@ class PPOLearner:
         running_log["td_error_abs"].append(
             (masked_td_error.abs().sum().item() / mask_elems)
         )
-        running_log["q_taken_mean"].append((v * mask).sum().item() / mask_elems)
+        running_log["q_taken_mean"].append((v[:, :-1] * mask).sum().item() / mask_elems)
         running_log["target_mean"].append(
             (target_returns * mask).sum().item() / mask_elems
         )
@@ -289,42 +289,23 @@ class PPOLearner:
         """
         batch_size, episode_length, n_agents = rewards.shape
         advantages = th.zeros_like(rewards)
-        
-        # Extract current and next values
-        current_values = target_values[:, :-1]  # [batch_size, episode_length, n_agents]
-        next_values = target_values[:, 1:]      # [batch_size, episode_length, n_agents]
-        
-        # Initialize the last advantage to 0
         last_gae_lam = th.zeros(batch_size, n_agents, device=rewards.device)
-        
+
+        current_values = target_values[:, :-1]  # [B, T, A]
+        next_values = target_values[:, 1:]      # [B, T, A]
+
         for t in reversed(range(episode_length)):
-            # Only compute GAE for valid timesteps (where mask is 1)
-            valid_timestep = mask[:, t]
-            
-            # Calculate next value, accounting for episode termination
-            if t == episode_length - 1:
-                # At the last timestep, there's no next value
-                next_non_terminal = th.zeros_like(terminated[:, t])
-                next_val = th.zeros_like(current_values[:, t])
-            else:
-                # Episode continues if not terminated and next timestep is valid
-                next_non_terminal = (1.0 - terminated[:, t]) * valid_timestep
-                next_val = next_values[:, t]
-            
-            # Calculate temporal difference error only for valid timesteps
-            delta = (rewards[:, t] + gamma * next_val * next_non_terminal - current_values[:, t]) * valid_timestep
-            
-            # Calculate GAE - advantage accumulation is reset when episode terminates
+            next_non_terminal = 1.0 - terminated[:, t]
+            delta = rewards[:, t] + gamma * next_values[:, t] * next_non_terminal - current_values[:, t]
             last_gae_lam = delta + gamma * gae_lambda * next_non_terminal * last_gae_lam
             advantages[:, t] = last_gae_lam
-            
-        # Returns are advantages + current values
+
         returns = advantages + current_values
-        
-        # Apply mask to both advantages and returns
+
+        # Masking
         advantages = advantages * mask
         returns = returns * mask
-            
+
         return advantages, returns
 
     def _update_targets(self):

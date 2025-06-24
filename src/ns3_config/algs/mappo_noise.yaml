@@ -10,7 +10,7 @@ buffer_size: 10
 batch_size: 10
 
 # update the target network every {} training steps
-target_update_interval_or_tau: 0.05
+target_update_interval_or_tau: 0.01
 
 lr: 0.01
 hidden_dim: 64
@@ -33,8 +33,8 @@ use_gae: True  # Set to True to enable Generalized Advantage Estimation
 gae_lambda: 0.95  # GAE lambda parameter (only used when use_gae=True)
 
 critic_type: "cv_critic_rnn_noise"
-epochs: 4
-eps_clip: 0.2
+epochs: 10
+eps_clip: 0.1
 name: "mappo_noise"
 
 t_max: 5001000
@@ -47,7 +47,7 @@ common_reward: True  # Run experiment with common reward setup
 noise_dim: 10
 noise_scale: 0.5
 
-entropy_coef: 0.1
+entropy_coef: 0.01
 
 agent: "cnn_rnn"
-pg_loss_coef: 10.0  # Coefficient for the policy gradient loss
+pg_loss_coef: 1.0  # Coefficient for the policy gradient loss

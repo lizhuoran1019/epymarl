@@ -1,0 +1,61 @@
+# MAPPO with exploration noise configuration
+name: "mappo_noise"
+
+# Standard MAPPO parameters
+runner: "episode"
+mac: "non_shared_mac"
+env_args:
+  state_last_action: False
+  obs_last_action: False
+
+# MAPPO specific parameters
+use_gae: True
+gae_lambda: 0.95
+q_nstep: 5
+
+# PPO specific parameters
+eps_clip: 0.2
+epochs: 4
+lr_start_factor: 1.0
+lr_end_factor: 0.1
+lr_total_iters: 1000000
+
+# Exploration noise parameters
+exploration_noise: True
+noise_scale: 0.1          # Initial noise scale
+noise_decay: 0.995        # Decay factor per training step
+min_noise_scale: 0.01     # Minimum noise scale
+
+# Adaptive entropy coefficient parameters
+adaptive_entropy_coef: True
+target_entropy: 20.0      # Target entropy value
+entropy_lr: 0.01          # Learning rate for entropy coefficient adaptation
+
+# Standard learning parameters
+lr: 0.0005
+critic_lr: 0.0005
+optim_alpha: 0.99
+optim_eps: 0.00001
+grad_norm_clip: 10
+td_lambda: 0.8
+gamma: 0.99
+batch_size_run: 1
+buffer_size: 1000
+pg_loss_coef: 1.0
+vf_loss_coef: 1.0
+entropy_coef: 0.01
+
+# Training parameters
+test_nepisode: 32
+test_interval: 2000
+log_interval: 2000
+runner_log_interval: 2000
+learner_log_interval: 2000
+t_max: 2000000
+
+# Environment standardization
+standardise_returns: True
+standardise_rewards: False
+
+# Target network updates
+target_update_interval_or_tau: 200

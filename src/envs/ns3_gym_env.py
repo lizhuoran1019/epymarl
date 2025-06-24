@@ -107,8 +107,8 @@ class Ns3GymEnv(MultiAgentEnv):
         reward = (
             main_link_rx_count_delta * 3.0
             + sub_link_rx_count_delta * 1.0
-            + np.sum(tx_good * 0.075)
-            - np.sum(tx_error * 0.2)
+            # + np.sum(tx_good * 0.075)
+            - np.sum(tx_error * 0.1)
         )
 
         # reward /= 3
@@ -161,6 +161,8 @@ class Ns3GymEnv(MultiAgentEnv):
             obs_dict_copy[key] = obs_dict_copy[key].reshape(self.n_agents, -1, order="F")
             if key == "channel_energy": # normalize channel_energy
                 obs_dict_copy[key] = obs_dict_copy[key]/200
+            if key == "enqueue_count":
+                obs_dict_copy[key] = obs_dict_copy[key]/500
             #     mean = obs_dict_copy[key].mean(axis=1, keepdims=True)
             #     std = obs_dict_copy[key].std(axis=1, keepdims=True)
             #     obs_dict_copy[key] = (obs_dict_copy[key] - mean) / (std + 1e-8)  # 防止除以0
@@ -222,7 +224,7 @@ class Ns3GymEnv(MultiAgentEnv):
         for key in obs_dict.keys():
             if key == "queue_size":
                 state_dict[key] = obs_dict[key].reshape(self.n_agents, -1, order="F")
-            if key == "tx_num" or key == "tx_good_num":
+            if key == "tx_num" or key == "tx_good_num" or key == "enqueue_count":
                 state_dict[key] = obs_dict[key].reshape(self.n_agents, -1, order="F") / 500
         state = np.concatenate([value for value in state_dict.values()], axis=1)
         # obs_with_action = np.concatenate((obs, self.__last_action), axis=1)
@@ -240,7 +242,7 @@ class Ns3GymEnv(MultiAgentEnv):
         """ Returns the shape of the state"""
         state_size = 0
         for key in self.env.observation_space.spaces.keys():
-            if key == "queue_size" or key == "tx_num" or key == "tx_good_num":
+            if key == "queue_size" or key == "tx_num" or key == "tx_good_num" or key == "enqueue_count":
                 state_size += self.env.observation_space.spaces[key].shape[1]
         state_size *= self.n_agents
         # state_size += self.n_agents * self.n_actions
