@@ -14,10 +14,10 @@ def build_td_lambda_targets(rewards, terminated, mask, target_qs, n_agents, gamm
     return ret[:, 0:-1]
 
 def build_gae_targets(rewards, masks, values, gamma, lambd):
-    B, T, A = values.size()
+    B, T, A, _ = values.size()
     T-=1
-    advantages = th.zeros(B, T, A).to(device=values.device)
-    advantage_t = th.zeros(B, A).to(device=values.device)
+    advantages = th.zeros(B, T, A, 1).to(device=values.device)
+    advantage_t = th.zeros(B, A, 1).to(device=values.device)
 
     for t in reversed(range(T)):
         delta = rewards[:, t] + values[:, t+1] * gamma * masks[:, t] - values[:, t]
@@ -25,4 +25,4 @@ def build_gae_targets(rewards, masks, values, gamma, lambd):
         advantages[:, t] = advantage_t
 
     returns = values[:, :T] + advantages
-    return returns
+    return advantages, returns

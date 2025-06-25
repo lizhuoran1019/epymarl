@@ -39,9 +39,6 @@ gamma: 0.99
 batch_size: 32 # Number of episodes to train on
 buffer_size: 32 # Size of the replay buffer
 lr: 0.0005 # Learning rate for agents
-lr_start_factor: 1.0 # Learning rate start factor (for learning rate decay)
-lr_end_factor: 0.1 # Learning rate end factor (for learning rate decay)
-lr_total_iters: 800
 optim_alpha: 0.99 # RMSProp alpha
 optim_eps: 0.00001 # RMSProp epsilon
 grad_norm_clip: 10 # Reduce magnitude of gradients above this L2 norm

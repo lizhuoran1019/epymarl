@@ -16,16 +16,25 @@ class MultinomialActionSelector():
 
     def select_action(self, agent_inputs, avail_actions, t_env, test_mode=False):
         masked_policies = agent_inputs.clone()
-        masked_policies[avail_actions == 0.0] = 0.0
-
-        self.epsilon = self.schedule.eval(t_env)
+        masked_policies[avail_actions == 0] = 0
+        masked_policies = masked_policies / (masked_policies.sum(-1, keepdim=True) + 1e-8)
 
         if test_mode and self.test_greedy:
             picked_actions = masked_policies.max(dim=2)[1]
         else:
+            self.epsilon = self.schedule.eval(t_env)
+
+            epsilon_action_num = (avail_actions.sum(-1, keepdim=True) + 1e-8)
+            masked_policies = ((1 - self.epsilon) * masked_policies
+                        + avail_actions * self.epsilon/epsilon_action_num)
+            masked_policies[avail_actions == 0] = 0
+            
             picked_actions = Categorical(masked_policies).sample().long()
 
-        return picked_actions
+        if self.args.save_probs:
+            return picked_actions, masked_policies
+        else:
+            return picked_actions
 
 
 REGISTRY["multinomial"] = MultinomialActionSelector
@@ -70,14 +79,13 @@ class SoftPoliciesSelector():
         self.args = args
 
     def select_action(self, agent_inputs, avail_actions, t_env, test_mode=False):
-        if test_mode:
-            # In test mode, we assume agent_inputs are already softmaxed policies
-            # and we just pick the action with the highest probability
-            picked_actions = agent_inputs.max(dim=2)[1]
-            return picked_actions
         m = Categorical(agent_inputs)
         picked_actions = m.sample().long()
-        return picked_actions
+        if self.args.save_probs:
+            # If we need to save the probabilities, we return them as well
+            return picked_actions, agent_inputs
+        else:
+            return picked_actions
 
 
 REGISTRY["soft_policies"] = SoftPoliciesSelector

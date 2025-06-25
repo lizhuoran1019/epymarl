@@ -107,11 +107,11 @@ class Ns3GymEnv(MultiAgentEnv):
         reward = (
             main_link_rx_count_delta * 3.0
             + sub_link_rx_count_delta * 1.0
-            # + np.sum(tx_good * 0.1)
-            - np.sum(tx_error * 0.05)
+            + np.sum(tx_good * 0.1)
+            - np.sum(tx_error * 0.2)
         )
 
-        # reward /= 3
+        # reward /= 4
 
         return reward
 
@@ -128,14 +128,16 @@ class Ns3GymEnv(MultiAgentEnv):
         tx_error = np.logical_and(tx, np.logical_not(tx_good))  # tx错误
 
         # 使用NumPy数组进行元素级别的乘法运算
-        main_link_rewards = main_link_rx_count_delta * np.array([0.5, 0.5, 0.5, 0.5, 0.1, 0.1, 0.1])
+        main_link_rewards = main_link_rx_count_delta * np.array([1, 1, 1, 1, 0.4, 0.4, 0.4])
         sub_link_rewards = sub_link_rx_count_delta * np.array([0.1, 0.1, 0.1, 0.1, 0.3, 0.3, 0.3])
+        tx_good_rewards = tx_good * np.array([0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08])  # tx好的奖励
+        tx_error_rewards = - np.array([0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]) * sum(tx_error) * np.array(tx) # tx错误的惩罚
         
         reward = (
             main_link_rewards
             + sub_link_rewards
-            + tx_good * 0.1
-            - tx_error * 0.2
+            + tx_good_rewards
+            + tx_error_rewards
         )
         # reward = (
         #     tx_good * [0.3, 0.3, 0.3, 0.3, 0.1, 0.1, 0.1]
@@ -227,9 +229,9 @@ class Ns3GymEnv(MultiAgentEnv):
             if key == "tx_num" or key == "tx_good_num" or key == "enqueue_count":
                 state_dict[key] = obs_dict[key].reshape(self.n_agents, -1, order="F") / 500
         state = np.concatenate([value for value in state_dict.values()], axis=1)
-        # obs_with_action = np.concatenate((obs, self.__last_action), axis=1)
-        # state = obs_with_action.flatten()
-        state = state.flatten()
+        obs_with_action = np.concatenate((state, self.__last_action), axis=1)
+        state = obs_with_action.flatten()
+        # state = state.flatten()
         state = np.append(state, self._episode_steps / self.episode_limit)  # 添加归一化的时间步
         # # 添加归一化主链路和子链路的接收计数
         # state = np.append(state, self.last_info.get('main_link_rx_count', 0) / 50)
@@ -245,7 +247,7 @@ class Ns3GymEnv(MultiAgentEnv):
             if key == "queue_size" or key == "tx_num" or key == "tx_good_num" or key == "enqueue_count":
                 state_size += self.env.observation_space.spaces[key].shape[1]
         state_size *= self.n_agents
-        # state_size += self.n_agents * self.n_actions
+        state_size += self.n_agents * self.n_actions
         state_size += 1 # 添加归一化的时间步
         # state_size += 2 # 添加主链路和子链路的接收计数
         # state_size += 1 # 添加丢包率

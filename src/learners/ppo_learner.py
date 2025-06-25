@@ -22,14 +22,12 @@ class PPOLearner:
         self.old_mac = copy.deepcopy(mac)
         self.agent_params = list(mac.parameters())
         self.agent_optimiser = Adam(params=self.agent_params, lr=args.lr)
-        self.agent_lr_scheduler = LinearLR(self.agent_optimiser, start_factor=self.args.lr_start_factor, end_factor=self.args.lr_end_factor, total_iters=self.args.lr_total_iters)
 
         self.critic = critic_resigtry[args.critic_type](scheme, args)
         self.target_critic = copy.deepcopy(self.critic)
 
         self.critic_params = list(self.critic.parameters())
-        self.critic_optimiser = Adam(params=self.critic_params, lr=args.lr)
-        self.critic_lr_scheduler = LinearLR(self.critic_optimiser, start_factor=self.args.lr_start_factor, end_factor=self.args.lr_end_factor, total_iters=self.args.lr_total_iters)
+        self.critic_optimiser = Adam(params=self.critic_params, lr=args.critic_lr)
 
         self.last_target_update_step = 0
         self.critic_training_steps = 0
@@ -146,7 +144,6 @@ class PPOLearner:
                 self.agent_params, self.args.grad_norm_clip
             )
             self.agent_optimiser.step()
-            self.agent_lr_scheduler.step()
 
         self.old_mac.load_state(self.mac)
         self.training_steps += 1
@@ -252,7 +249,6 @@ class PPOLearner:
             self.critic_params, self.args.grad_norm_clip
         )
         self.critic_optimiser.step()
-        self.critic_lr_scheduler.step() 
 
         running_log["critic_loss"].append(loss.item())
         running_log["critic_grad_norm"].append(grad_norm.item())

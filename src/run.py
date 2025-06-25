@@ -111,6 +111,7 @@ def run_sequential(args, logger):
         "state": {"vshape": env_info["state_shape"]},
         "obs": {"vshape": env_info["obs_shape"], "group": "agents"},
         "actions": {"vshape": (1,), "group": "agents", "dtype": th.long},
+        "probs": {"vshape": (env_info["n_actions"],), "group": "agents", "dtype": th.float},
         "avail_actions": {
             "vshape": (env_info["n_actions"],),
             "group": "agents",

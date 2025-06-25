@@ -18,10 +18,10 @@ class CentralVCriticRNNNoise(nn.Module):
 
         # Set up network layers
         self.fc1 = nn.Linear(input_shape, args.hidden_dim)
-        self.gru = nn.GRU(input_size=args.hidden_dim, hidden_size=args.hidden_dim, num_layers=1, batch_first=True, bidirectional=False)
+        self.gru = nn.GRU(input_size=args.hidden_dim+self.n_agents, hidden_size=args.hidden_dim, num_layers=1, batch_first=True, bidirectional=False)
         self.layer_norm = nn.LayerNorm(args.hidden_dim)
         self.fc2 = nn.Sequential(
-            nn.Linear(args.hidden_dim+self.n_agents, args.hidden_dim),
+            nn.Linear(args.hidden_dim, args.hidden_dim),
             nn.ReLU(),
             nn.Linear(args.hidden_dim, 1)
         )
@@ -44,10 +44,11 @@ class CentralVCriticRNNNoise(nn.Module):
         x = F.tanh(self.fc1(inputs)) 
         # x = F.relu(self.fc1(inputs))
         #  添加ID
-        x, _ = self.gru(x, None)
-        # x = self.layer_norm(x)
         agent_ids = th.eye(self.n_agents, device=batch.device).unsqueeze(1).repeat(bs, max_t, 1)  # [bs*n_agents, max_t, n_agents]
         x = th.cat((x, agent_ids), dim=-1)  # [bs*n_agents, max_t, hidden_dim + n_agents]
+        # gru
+        x, _ = self.gru(x, None)
+        # x = self.layer_norm(x)
         x = x.view(bs, self.n_agents, max_t, -1) # [bs, n_agents, max_t, hidden_dim]
         x = x.permute(0, 2, 1, 3)  # [bs, max_t, n_agents, hidden_dim]
         q = self.fc2(x)

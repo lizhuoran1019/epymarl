@@ -124,20 +124,26 @@ class ParallelRunner:
         ]
         final_env_infos = []  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
 
+        save_probs = getattr(self.args, "save_probs", False)
         while True:
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch for each un-terminated env
-            actions = self.mac.select_actions(
-                self.batch,
-                t_ep=self.t,
-                t_env=self.t_env,
-                bs=envs_not_terminated,
-                test_mode=test_mode,
-            )
+            if save_probs:
+                actions, probs = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, bs=envs_not_terminated, test_mode=test_mode)
+            else:
+                actions = self.mac.select_actions(
+                    self.batch,
+                    t_ep=self.t,
+                    t_env=self.t_env,
+                    bs=envs_not_terminated,
+                    test_mode=test_mode,
+                )
             cpu_actions = actions.to("cpu").numpy()
 
             # Update the actions taken
             actions_chosen = {"actions": actions.unsqueeze(1)}
+            if save_probs:
+                actions_chosen["probs"] = probs.unsqueeze(1).detach()
             self.batch.update(
                 actions_chosen, bs=envs_not_terminated, ts=self.t, mark_filled=False
             )

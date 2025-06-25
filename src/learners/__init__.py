@@ -5,7 +5,7 @@ from .actor_critic_learner import ActorCriticLearner
 from .actor_critic_pac_learner import PACActorCriticLearner
 from .actor_critic_pac_dcg_learner import PACDCGLearner
 from .maddpg_learner import MADDPGLearner
-from .ppo_learner import PPOLearner
+from .ppo_learner2 import PPOLearner
 
 
 REGISTRY = {}
